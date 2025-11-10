@@ -145,34 +145,24 @@ const searchButton = document.getElementById("searchButton");
 const resultsDiv = document.getElementById("results");
 let apiMovies = [];
 
-// Run search when button is clicked
-searchButton.addEventListener("click", loadMovies);
-
-
-// Listen for Enter key
-searchBar.addEventListener("keypress", function (event) {
-  if (event.key === "Enter") {
-    loadMovies();
-  }
-});
-
-// Hide results when cleared
-searchBar.addEventListener("input", function () {
-  if (this.value.trim() === "") {
-    resultsDiv.innerHTML = "";
-    resultsDiv.style.display = "none";
-  }
-});
+// Debounce helper — prevents multiple API calls while typing
+function debounce(func, delay) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), delay);
+  };
+}
 
 // Fetch movies from OMDB API
 async function loadMovies() {
   const query = searchBar.value.trim();
   if (!query) {
-    resultsDiv.innerHTML = `<p>Please enter a search term.</p>`;
-    resultsDiv.style.display = "block";
+    resultsDiv.innerHTML = "";
+    resultsDiv.style.display = "none";
     return;
   }
-
+   
   try {
     // ✅ Correct API endpoint
     const response = await fetch(
@@ -186,13 +176,35 @@ async function loadMovies() {
     } else {
       resultsDiv.innerHTML = `<p>No results found for "${query}".</p>`;
       resultsDiv.style.display = "block";
-    }
+    } 
   } catch (error) {
     console.error("Error fetching movies:", error);
     resultsDiv.innerHTML = `<p>Something went wrong. Try again later.</p>`;
     resultsDiv.style.display = "block";
   }
 }
+
+// Debounced version of loadMovies
+const debounceSearch = debounce(loadMovies, 250);
+
+// Event listeners
+searchBar.addEventListener("input", () => {
+  const query = searchBar.value.trim();
+  if (!query) {
+    // Clear results immediately on backspace or X click
+    resultsDiv.innerHTML = "";
+    resultsDiv.style.display = "none";
+  } else {
+    debouncedSearch();
+  }
+});
+
+searchBar.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") loadMovies();
+});
+
+searchButton.addEventListener("click", loadMovies);
+
 
 // Display movies in HTML
 function displayMovies(movies) {
@@ -213,9 +225,6 @@ function displayMovies(movies) {
   resultsDiv.innerHTML = htmlString;
   resultsDiv.style.display = "grid";
 }
-
-
-
 
 
 
